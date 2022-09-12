@@ -121,6 +121,14 @@ found:
     return 0;
   }
 
+  // An empty user page table.
+  p->kernal_pagetable = kvminit2();
+  if(p->kernal_pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
