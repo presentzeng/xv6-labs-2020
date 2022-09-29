@@ -106,6 +106,8 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
+  p->kernal_pagetable = kvminit2();
+  //p->kernal_pagetable = proc_kpt_init();
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -122,12 +124,13 @@ found:
   }
 
   // An empty kernal page table.
-  p->kernal_pagetable = kvminit2();
-  if(p->kernal_pagetable == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
+  //if(p->kernal_pagetable == 0){
+  //  freeproc(p);
+  //  release(&p->lock);
+  //  return 0;
+  //}
+
+  // get real pa from kstack
   //uint64 va = KSTACK((int) (p - proc));
   //kvmmap(va, (uint64)p->kernal_pagetable, PGSIZE, PTE_R | PTE_W);
   //p->kstack = va;

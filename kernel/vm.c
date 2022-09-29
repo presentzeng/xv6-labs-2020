@@ -47,11 +47,28 @@ kvminit()
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
 
+void
+uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(pagetable, va, sz, pa, perm) != 0)
+    panic("kvmmap");
+}
+
 pagetable_t
 kvminit2()
 {
-  pagetable_t kernel_pagetable2 = (pagetable_t) kalloc();
-  return kernel_pagetable2;
+  //pagetable_t pgtb = (pagetable_t) kalloc();
+  pagetable_t  kpt= uvmcreate();
+  if (kpt == 0) return 0;
+  mappages(kpt, UART0, PGSIZE, UART0, PTE_R | PTE_W);
+  uvmmap(kpt, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  uvmmap(kpt, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  uvmmap(kpt, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  uvmmap(kpt, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  uvmmap(kpt, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  uvmmap(kpt, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return kpt;
+
 }
 
 // Switch h/w page table register to the kernel's page table,
