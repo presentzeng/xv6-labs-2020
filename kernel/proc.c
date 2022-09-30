@@ -25,22 +25,22 @@ extern char trampoline[]; // trampoline.S
 void
 procinit(void)
 {
-  struct proc *p;
-  
-  initlock(&pid_lock, "nextpid");
-  for(p = proc; p < &proc[NPROC]; p++) {
-      initlock(&p->lock, "proc");
+  //struct proc *p;
+  //
+  //initlock(&pid_lock, "nextpid");
+  //for(p = proc; p < &proc[NPROC]; p++) {
+  //    initlock(&p->lock, "proc");
 
-      // Allocate a page for the process's kernel stack.
-      // Map it high in memory, followed by an invalid
-      // guard page.
-      char *pa = kalloc();
-      if(pa == 0)
-        panic("kalloc");
-      uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
-  }
+  //    // Allocate a page for the process's kernel stack.
+  //    // Map it high in memory, followed by an invalid
+  //    // guard page.
+  //    //char *pa = kalloc();
+  //    //if(pa == 0)
+  //    //  panic("kalloc");
+  //    //uint64 va = KSTACK((int) (p - proc));
+  //    //kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+  //    //p->kstack = va;
+  //}
   kvminithart();
 }
 
@@ -106,7 +106,6 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
-  p->kernal_pagetable = kvminit2();
   //p->kernal_pagetable = proc_kpt_init();
 
   // Allocate a trapframe page.
@@ -122,6 +121,15 @@ found:
     release(&p->lock);
     return 0;
   }
+
+
+    p->kernal_pagetable = kvminit2();
+    char *pa = kalloc();
+    if(pa == 0)
+      panic("kalloc");
+    uint64 va = KSTACK((int) (p - proc));
+    uvmmap(p->kernal_pagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+    p->kstack = va;
 
   // An empty kernal page table.
   //if(p->kernal_pagetable == 0){
@@ -144,6 +152,23 @@ found:
   return p;
 }
 
+// Recursively free page-table pages
+// but retain leaf physical addresses
+void
+freewalk_kproc(pagetable_t pagetable) {
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if((pte & PTE_V)){
+      pagetable[i] = 0;
+      if ((pte & (PTE_R|PTE_W|PTE_X)) == 0)
+      {
+        uint64 child = PTE2PA(pte);
+        freewalk_kproc((pagetable_t)child);
+      }
+    }
+  }
+  kfree((void*)pagetable);
+}
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -153,10 +178,18 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+      if (p->kstack)
+    { 
+        pte_t* pte = walk(p->kernal_pagetable, p->kstack, 0);
+        if (pte == 0)
+            panic("freeproc: walk");
+        kfree((void*)PTE2PA(*pte));
+    }
+    p->kstack = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
-  //if(p->kernal_pagetable)
-  //  proc_freepagetable(p->kernal_pagetable, p->sz);
+  if(p->kernal_pagetable)
+    freewalk_kproc(p->kernal_pagetable);
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -485,18 +518,19 @@ scheduler(void)
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
         // each process has each kernal root page that needs store
-        //w_satp(MAKE_SATP(p->kernal_pagetable));
-        //sfence_vma();
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        w_satp(MAKE_SATP(p->kernal_pagetable));
+        sfence_vma();
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
+        kvminithart();
 
         found = 1;
       }

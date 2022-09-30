@@ -57,8 +57,9 @@ uvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
 pagetable_t
 kvminit2()
 {
-  //pagetable_t pgtb = (pagetable_t) kalloc();
-  pagetable_t  kpt= uvmcreate();
+  pagetable_t  kpt= (pagetable_t) kalloc();
+  memset(kpt, 0, PGSIZE);
+  //pagetable_t  kpt= uvmcreate();
   if (kpt == 0) return 0;
   mappages(kpt, UART0, PGSIZE, UART0, PTE_R | PTE_W);
   uvmmap(kpt, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
