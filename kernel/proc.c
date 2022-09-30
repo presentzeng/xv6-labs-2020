@@ -123,12 +123,12 @@ found:
   }
 
 
-    p->kernal_pagetable = kvminit2();
+    p->kpg = kvminit2();
     char *pa = kalloc();
     if(pa == 0)
       panic("kalloc");
     uint64 va = KSTACK((int) (p - proc));
-    uvmmap(p->kernal_pagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+    uvmmap(p->kpg, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     p->kstack = va;
 
   // An empty kernal page table.
@@ -180,7 +180,7 @@ freeproc(struct proc *p)
   p->trapframe = 0;
       if (p->kstack)
     { 
-        pte_t* pte = walk(p->kernal_pagetable, p->kstack, 0);
+        pte_t* pte = walk(p->kpg, p->kstack, 0);
         if (pte == 0)
             panic("freeproc: walk");
         kfree((void*)PTE2PA(*pte));
@@ -188,8 +188,8 @@ freeproc(struct proc *p)
     p->kstack = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
-  if(p->kernal_pagetable)
-    freewalk_kproc(p->kernal_pagetable);
+  if(p->kpg)
+    freewalk_kproc(p->kpg);
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -523,7 +523,7 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        w_satp(MAKE_SATP(p->kernal_pagetable));
+        w_satp(MAKE_SATP(p->kpg));
         sfence_vma();
         swtch(&c->context, &p->context);
 
