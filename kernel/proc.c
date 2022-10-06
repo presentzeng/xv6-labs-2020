@@ -156,18 +156,19 @@ found:
 // but retain leaf physical addresses
 void
 freewalk_kproc(pagetable_t pagetable) {
-  for(int i = 0; i < 512; i++){
-    pte_t pte = pagetable[i];
-    if((pte & PTE_V)){
-      pagetable[i] = 0;
-      if ((pte & (PTE_R|PTE_W|PTE_X)) == 0)
-      {
-        uint64 child = PTE2PA(pte);
-        freewalk_kproc((pagetable_t)child);
-      }
+    for(int i = 0; i < 512; i++)
+    {
+        pte_t pte = pagetable[i];
+        if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+            uint64 child = PTE2PA(pte);
+            freewalk_kproc((pagetable_t)child);
+            pagetable[i] = 0;
+        }
+        else if(pte & PTE_V){
+            //leaf
+        }
     }
-  }
-  kfree((void*)pagetable);
+    kfree((void*)pagetable);
 }
 // free a proc structure and the data hanging from it,
 // including user pages.
@@ -178,12 +179,10 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
-      if (p->kstack)
+    if (p->kstack)
     { 
-        pte_t* pte = walk(p->kpg, p->kstack, 0);
-        if (pte == 0)
-            panic("freeproc: walk");
-        kfree((void*)PTE2PA(*pte));
+        pte_t * tmp = walk(p->kpg, p->kstack, 0);    
+        kfree((void*)PTE2PA(*tmp));
     }
     p->kstack = 0;
   if(p->pagetable)
