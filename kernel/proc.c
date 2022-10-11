@@ -85,6 +85,32 @@ allocpid() {
   return pid;
 }
 
+void *
+copy_user_pgtb(pagetable_t kp, pagetable_t up)
+{
+    for(int i = 0; i < 512; i++)
+    {
+        pte_t pte = up[i];
+        if((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
+        {
+            uint64 child = PTE2PA(pte);
+            copy_user_pgtb(kp, (pagetable_t)child); 
+        }
+        else if(pte & PTE_V)
+        {
+            //leaf
+            pte_t * pt;
+            uint64 adr = PTE2PA(pte);
+            if((pt = walk(kp, adr, 1)) == 0)
+                continue;
+            if(*pt & PTE_V)
+                continue;
+            uvmmap(kp, adr, adr, PGSIZE, PTE_R | PTE_W);
+        }
+    }
+    return 0;
+}
+
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
@@ -130,6 +156,7 @@ found:
     uint64 va = KSTACK((int) (p - proc));
     uvmmap(p->kpg, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     p->kstack = va;
+    copy_user_pgtb(p->kpg, p->pagetable);
 
   // An empty kernal page table.
   //if(p->kernal_pagetable == 0){
