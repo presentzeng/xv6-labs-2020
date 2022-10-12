@@ -101,11 +101,14 @@ copy_user_pgtb(pagetable_t kp, pagetable_t up)
             //leaf
             pte_t * pt;
             uint64 adr = PTE2PA(pte);
-            if((pt = walk(kp, adr, 1)) == 0)
+            if((pt = walk(kp, adr, 0)) == 0)
                 continue;
             if(*pt & PTE_V)
+            {
+                *pt = *pt & ~(PTE_U);
                 continue;
-            uvmmap(kp, adr, adr, PGSIZE, PTE_R | PTE_W);
+            }
+            uvmmap(kp, adr, adr, PGSIZE, PTE_R | PTE_W | ~(PTE_U));
         }
     }
     return 0;
@@ -369,6 +372,7 @@ fork(void)
   pid = np->pid;
 
   np->state = RUNNABLE;
+  copy_user_pgtb(np->kpg, np->pagetable);
 
   release(&np->lock);
 
