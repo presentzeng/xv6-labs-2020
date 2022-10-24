@@ -92,7 +92,7 @@ copy_user_pgtb(pagetable_t kp, pagetable_t up,int newsz,int oldsz)
     { panic("failed"); }
 
     oldsz = PGROUNDUP(oldsz);
-    for(int a = oldsz; a < newsz; a += PGSIZE)
+    for(uint64 a = oldsz; a < newsz; a += PGSIZE)
     {
         pte_t * pte_source = walk(up, a, 0);
         if (pte_source == 0)
@@ -105,7 +105,9 @@ copy_user_pgtb(pagetable_t kp, pagetable_t up,int newsz,int oldsz)
             panic("alloc failed for copy_user_pgtb");
         }
         uint64 pa = PTE2PA(*pte_source);
-        *pte_dest = (PA2PTE(pa) | ~(PTE_U));
+        uint flags = (PTE_FLAGS(*pte_source) & (~PTE_U));
+        *pte_dest = PA2PTE(pa) | flags;
+        //*pte_dest = (PA2PTE(pa) | ~(PTE_U));
     }
     return 0;
 }
