@@ -331,7 +331,7 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-
+  copy_user_pgtb(p->kpg, p->pagetable, p->sz, 0);
   release(&p->lock);
 }
 
