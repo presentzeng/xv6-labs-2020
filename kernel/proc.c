@@ -86,33 +86,58 @@ allocpid() {
 }
 
 void *
-copy_user_pgtb(pagetable_t kp, pagetable_t up)
+copy_user_pgtb(pagetable_t kp, pagetable_t up,int newsz,int oldsz)
 {
-    for(int i = 0; i < 512; i++)
+    if(newsz < oldsz)
+    { panic("failed"); }
+
+    oldsz = PGROUNDUP(oldsz);
+    for(int a = oldsz; a < newsz; a += PGSIZE)
     {
-        pte_t pte = up[i];
-        if((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
+        pte_t * pte_source = walk(up, a, 0);
+        if (pte_source == 0)
         {
-            uint64 child = PTE2PA(pte);
-            copy_user_pgtb(kp, (pagetable_t)child); 
+            panic("why???it should be there");
         }
-        else if(pte & PTE_V)
+        pte_t * pte_dest = walk(kp, a, 1);
+        if(pte_dest == 0)
         {
-            //leaf
-            pte_t * pt;
-            uint64 adr = PTE2PA(pte);
-            if((pt = walk(kp, adr, 0)) == 0)
-                continue;
-            if(*pt & PTE_V)
-            {
-                *pt = *pt & ~(PTE_U);
-                continue;
-            }
-            uvmmap(kp, adr, adr, PGSIZE, PTE_R | PTE_W | ~(PTE_U));
+            panic("alloc failed for copy_user_pgtb");
         }
+        uint64 pa = PTE2PA(*pte_source);
+        *pte_dest = (PA2PTE(pa) | ~(PTE_U));
     }
     return 0;
 }
+
+//copy_user_pgtb2(pagetable_t kp, pagetable_t up)
+//{
+//    return 0;
+    //for(int i = 0; i < 512; i++)
+    //{
+    //    pte_t pte = up[i];
+    //    if((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
+    //    {
+    //        uint64 child = PTE2PA(pte);
+    //        copy_user_pgtb(kp, (pagetable_t)child); 
+    //    }
+    //    else if(pte & PTE_V)
+    //    {
+    //        //leaf
+    //        pte_t * pt;
+    //        uint64 adr = PTE2PA(pte);
+    //        if((pt = walk(kp, adr, 0)) == 0)
+    //            continue;
+    //        if(*pt & PTE_V)
+    //        {
+    //            *pt = *pt & ~(PTE_U);
+    //            continue;
+    //        }
+    //        uvmmap(kp, adr, adr, PGSIZE, PTE_R | PTE_W | ~(PTE_U));
+    //    }
+    //}
+    //return 0;
+//}
 
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
@@ -159,7 +184,6 @@ found:
     uint64 va = KSTACK((int) (p - proc));
     uvmmap(p->kpg, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     p->kstack = va;
-    copy_user_pgtb(p->kpg, p->pagetable);
 
   // An empty kernal page table.
   //if(p->kernal_pagetable == 0){
@@ -366,13 +390,13 @@ fork(void)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
+  copy_user_pgtb(np->kpg, np->pagetable, np->sz, 0);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
 
   np->state = RUNNABLE;
-  copy_user_pgtb(np->kpg, np->pagetable);
 
   release(&np->lock);
 

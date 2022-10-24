@@ -228,4 +228,4 @@ int             sockwrite(struct sock *, uint64, int);
 void            sockrecvudp(struct mbuf*, uint32, uint16, uint16);
 #endif
 void            vmprint(pagetable_t, int);
-void*           copy_user_pgtb(pagetable_t, pagetable_t);
+void*           copy_user_pgtb(pagetable_t, pagetable_t, int, int);

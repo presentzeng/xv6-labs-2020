@@ -114,7 +114,7 @@ exec(char *path, char **argv)
   p->sz = sz;
   p->trapframe->epc = elf.entry;  // initial program counter = main
   p->trapframe->sp = sp; // initial stack pointer
-  copy_user_pgtb(p->kpg, p->pagetable);
+  copy_user_pgtb(p->kpg, p->pagetable, p->sz, 0);
 
   proc_freepagetable(oldpagetable, oldsz);
 
