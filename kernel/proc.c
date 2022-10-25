@@ -350,6 +350,7 @@ growproc(int n)
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+    copy_user_pgtb(p->kpg, p->pagetable, sz, sz-n);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }

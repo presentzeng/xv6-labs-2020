@@ -49,7 +49,7 @@ sys_sbrk(void)
   addr = myproc()->sz;
   if(growproc(n) < 0)
     return -1;
-  copy_user_pgtb(myproc()->kpg, myproc()->pagetable, myproc()->sz, myproc()->sz-n);
+  //copy_user_pgtb(myproc()->kpg, myproc()->pagetable, myproc()->sz, myproc()->sz-n);
   return addr;
 }
 
