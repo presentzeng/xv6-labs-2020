@@ -6,6 +6,8 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include <stddef.h>
+
 
 uint64
 sys_exit(void)
@@ -20,6 +22,7 @@ sys_exit(void)
 uint64
 sys_getpid(void)
 {
+  backtrace(NULL);
   return myproc()->pid;
 }
 
@@ -55,9 +58,9 @@ sys_sbrk(void)
 uint64
 sys_sleep(void)
 {
+  //backtrace();
   int n;
   uint ticks0;
-
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);

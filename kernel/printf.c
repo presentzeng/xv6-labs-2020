@@ -14,6 +14,7 @@
 #include "riscv.h"
 #include "defs.h"
 #include "proc.h"
+#include <stddef.h>
 
 volatile int panicked = 0;
 
@@ -131,4 +132,32 @@ printfinit(void)
 {
   initlock(&pr.lock, "pr");
   pr.locking = 1;
+}
+
+void backtrace(uint64 * pointer)
+{
+   if(pointer == NULL)
+   {
+    uint64 fp_temp = r_fp();
+    uint64 * fp = (uint64 *)fp_temp;
+    uint64 val = *(fp-1);
+    printf("in backtrace %p\n", val); 
+    backtrace((uint64 *)(*(fp-2)));
+    }
+    else
+    {
+        uint64 val = *(pointer-1);
+        if(val < 0x80000000)
+        { return; }
+        printf("in backtrace val2 %p\n", val); 
+        backtrace((uint64 *)(*(pointer-2)));
+    }
+
+
+   //uint64 val = *(fp-16);
+   //uint64 val = *(fp);
+   //printf("in backtrace val1 %p\n", val); 
+   //val = *(fp-2);
+   //printf("in backtrace val3 %p\n", val); 
+   //printf("in backtrace fp %p\n", fp_temp); 
 }

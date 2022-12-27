@@ -5,6 +5,7 @@
 int
 main(int argc, char *argv[])
 {
-  sleep(1);
+  //sleep(1);
+  getpid();
   exit(0);
 }
