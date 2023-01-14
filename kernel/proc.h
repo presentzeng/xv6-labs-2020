@@ -105,4 +105,5 @@ struct proc {
   char name[16];               // Process name (debugging)
   int interval;                // alarm interval
   void (* pfn)();                // handler function
+  int total_tick;               // total_tick
 };
