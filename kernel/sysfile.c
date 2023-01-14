@@ -484,3 +484,15 @@ sys_pipe(void)
   }
   return 0;
 }
+
+uint64
+sys_sigreturn(void)
+{
+    return 0;
+}
+
+uint64
+sys_sigalarm(int ticks, void (*handler)())
+{
+    return 0;
+}
