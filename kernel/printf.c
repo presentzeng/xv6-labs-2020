@@ -136,22 +136,32 @@ printfinit(void)
 
 void backtrace(uint64 * pointer)
 {
-   if(pointer == NULL)
-   {
     uint64 fp_temp = r_fp();
+    // same page
+    uint64 * bottom =  (uint64 *)PGROUNDDOWN(fp_temp);
+    uint64 * up= (uint64 *) PGROUNDUP(fp_temp);
+    // convert to pointer
     uint64 * fp = (uint64 *)fp_temp;
-    uint64 val = *(fp-1);
-    printf("in backtrace %p\n", val); 
-    backtrace((uint64 *)(*(fp-2)));
-    }
-    else
+    while(1)
     {
-        uint64 val = *(pointer-1);
-        if(val < 0x80000000)
-        { return; }
-        printf("in backtrace val2 %p\n", val); 
-        backtrace((uint64 *)(*(pointer-2)));
+        //  get return address 
+        uint64 val = *(fp-1);
+        printf("in backtrace %p\n", val); 
+        // get previous stack pointer
+        fp = (uint64 *)*(fp-2);
+        if(fp > bottom && fp < up)
+        { }
+        else
+        { break; }
     }
+
+
+  //      uint64 val = *(pointer-1);
+  //      if(val >  || val <  PGROUNDDOWN(val))
+  //      { return; }
+  //      //if(val < 0x80000000)
+  //      printf("in backtrace val2 %p\n", val); 
+  //      backtrace((uint64 *)(*(pointer-2)));
 
 
    //uint64 val = *(fp-16);
