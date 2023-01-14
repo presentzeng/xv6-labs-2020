@@ -494,5 +494,8 @@ sys_sigreturn(void)
 uint64
 sys_sigalarm(int ticks, void (*handler)())
 {
+    struct proc *p = myproc();
+    p->interval = ticks;
+    p->pfn = handler;
     return 0;
 }
